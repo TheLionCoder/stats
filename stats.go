@@ -62,7 +62,7 @@ func main() {
 			continue
 		}
 
-		squared = squared + math.Pow((n-meanValue), 2)
+		squared = squared + ((n - meanValue) * (n - meanValue))
 	}
 
 	standardDeviation := math.Sqrt(squared / float64(nValues))
