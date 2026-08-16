@@ -2,8 +2,15 @@ package main
 
 import (
 	"encoding/csv"
-	"log"
+	"errors"
+	"fmt"
+	"io"
 	"os"
+)
+
+const (
+	csvDelimiter      = '|'
+	expectedCSVFields = 4
 )
 
 type Record struct {
@@ -13,28 +20,95 @@ type Record struct {
 	LastAccess string
 }
 
-var myData = []Record{}
-
-func ReadCSVFile(path string) ([][]string, error) {
-	_, err := os.Stat(path)
-
+func ReadCSVFile(path string) ([]Record, error) {
+	file, err := os.Open(path)
 	if err != nil {
-		return nil, err
+		return nil, fmt.Errorf("open CSV file %q: %w", path, err)
+	}
+	defer file.Close()
+
+	reader := csv.NewReader(file)
+	reader.FieldsPerRecord = expectedCSVFields
+	reader.ReuseRecord = true
+
+	records := make([]Record, 0)
+	rowNumber := 0
+
+	for {
+		row, err := reader.Read()
+
+		if errors.Is(err, io.EOF) {
+			break
+		}
+
+		rowNumber++
+
+		if err != nil {
+			return nil, fmt.Errorf(
+				"read CSV row from %q: %w",
+				rowNumber,
+				path,
+				err,
+			)
+		}
+
+		records = append(records, Record{
+			Name:       row[0],
+			Surname:    row[1],
+			Number:     row[2],
+			LastAccess: row[3],
+		})
 	}
 
-	fi, err := os.Open(path)
+	return records, nil
+}
 
+func SaveFile(path string, data []Record) (err error) {
+	file, err := os.Create(path)
 	if err != nil {
-		return nil, err
+		return fmt.Errorf("create CSV file %q: %w", path, err)
 	}
 
-	defer fi.Close()
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err == nil {
+			err = fmt.Errorf(
+				"close CSV file %q: %w",
+				path,
+				closeErr,
+			)
+		}
+	}()
 
-	lines, err := csv.NewReader(fi).ReadAll()
+	writer := csv.NewWriter(file)
+	writer.Comma = csvDelimiter
 
-	if err != nil {
-		return [][]string{}, err
+	for i, record := range data {
+		row := []string{
+			record.Name,
+			record.Surname,
+			record.Number,
+			record.LastAccess,
+		}
+
+		if writerErr := writer.Write(row); writerErr != nil {
+			return fmt.Errorf(
+				"write record %d to %q: %w",
+				i+1,
+				path,
+				writerErr,
+			)
+		}
 	}
 
-	return lines, nil
+	writer.Flush()
+
+	if writerErr := writer.Error(); writerErr != nil {
+		return fmt.Errorf(
+			"flush CSV file %q: %w",
+			path,
+			writerErr,
+		)
+	}
+
+	return nil
 }

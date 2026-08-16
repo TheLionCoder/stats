@@ -1,71 +1,43 @@
 package main
 
 import (
-	"fmt"
-	"math"
+	"log"
 	"os"
-	"strconv"
 )
 
 func main() {
-	arguments := os.Args
-	if len(arguments) == 1 {
-		fmt.Println("Need one or more arguments!")
-		return
+	if len(os.Args) != 3 {
+		log.Println("csvData input output!")
+		os.Exit(1)
 	}
 
-	var min, max float64
-	var initialized = 0
-	nValues := 0
-	var sum float64
+	input := os.Args[1]
+	output := os.Args[2]
+	lines, err := ReadCSVFile(input)
+	var data = []Record{}
 
-	for i := 1; i < len(arguments); i++ {
-		n, err := strconv.ParseFloat(arguments[i], 64)
-		if err != nil {
-			continue
-		}
-
-		nValues = nValues + 1
-		sum = sum + n
-
-		if initialized == 0 {
-			min = n
-			max = n
-			initialized = 1
-			continue
-		}
-
-		if n < min {
-			min = n
-		}
-
-		if n > max {
-			max = n
-		}
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
 	}
 
-	fmt.Println("Number of values:", nValues)
-	fmt.Println("Min:", min)
-	fmt.Println("Max:", max)
-
-	if nValues == 0 {
-		return
-	}
-
-	meanValue := sum / float64(nValues)
-	fmt.Printf("Mean value: %.5f\n", meanValue)
-
-	var squared float64
-	for i := 1; i < len(arguments); i++ {
-		n, err := strconv.ParseFloat(arguments[i], 64)
-		if err != nil {
-			continue
+	for _, line := range lines {
+		temp := Record{
+			Name:       line[0],
+			Surname:    line[1],
+			Number:     line[2],
+			LastAccess: line[3],
 		}
 
-		squared = squared + ((n - meanValue) * (n - meanValue))
+		data = append(data, temp)
+		log.Println(temp)
 	}
 
-	standardDeviation := math.Sqrt(squared / float64(nValues))
-	fmt.Printf("Standerd Deviation: %.5f\n", standardDeviation)
+	err = SaveFile(output, data)
+
+	if err != nil {
+		log.Println(err)
+		os.Exit(1)
+	}
 
 }
