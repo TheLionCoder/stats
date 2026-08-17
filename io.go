@@ -25,7 +25,15 @@ func ReadCSVFile(path string) ([]Record, error) {
 	if err != nil {
 		return nil, fmt.Errorf("open CSV file %q: %w", path, err)
 	}
-	defer file.Close()
+
+	defer func() {
+		if closeErr := file.Close(); closeErr != nil && err != nil {
+			err = fmt.Errorf("close CSV file %q: %w",
+				path,
+				closeErr,
+			)
+		}
+	}()
 
 	reader := csv.NewReader(file)
 	reader.FieldsPerRecord = expectedCSVFields
@@ -45,7 +53,7 @@ func ReadCSVFile(path string) ([]Record, error) {
 
 		if err != nil {
 			return nil, fmt.Errorf(
-				"read CSV row from %q: %w",
+				"read CSV row %d from %q: %w",
 				rowNumber,
 				path,
 				err,
