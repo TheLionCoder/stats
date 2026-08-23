@@ -6,6 +6,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"strconv"
 )
 
 const (
@@ -16,7 +17,7 @@ const (
 type Record struct {
 	Name       string
 	Surname    string
-	Number     string
+	Salary     float64
 	LastAccess string
 }
 
@@ -60,10 +61,20 @@ func ReadCSVFile(path string) ([]Record, error) {
 			)
 		}
 
+		salary, err := strconv.ParseFloat(row[2], 64)
+		if err != nil {
+			return nil, fmt.Errorf(
+				"parse Salary at row %d from %q: %w",
+				rowNumber,
+				path,
+				err,
+			)
+		}
+
 		records = append(records, Record{
 			Name:       row[0],
 			Surname:    row[1],
-			Number:     row[2],
+			Salary:     salary,
 			LastAccess: row[3],
 		})
 	}
@@ -94,7 +105,7 @@ func SaveFile(path string, data []Record) (err error) {
 		row := []string{
 			record.Name,
 			record.Surname,
-			record.Number,
+			strconv.FormatFloat(record.Salary, 'f', -1, 64),
 			record.LastAccess,
 		}
 
